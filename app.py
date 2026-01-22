@@ -1,6 +1,5 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_file
 import os
-import re
 import uuid
 import datetime
 from pymongo import MongoClient
@@ -22,7 +21,7 @@ client = MongoClient(MONGO_URI)
 db = client['consentiumWebApp']
 boards_col = db['newboards']
 users_col = db['users']
-releases_col = db['firmware_releases']
+releases_col = db['firmwareReleases']
 
 USERNAME = "debjyotichowdhury"
 
@@ -80,7 +79,7 @@ def get_boards():
     # Fetch boards
     user_boards = list(boards_col.find(
         {'userId': user_id},
-        {'_id': False, 'userId': False}  # Exclude internal fields
+        {'_id': False, 'userId': False, 'active_release_id': False}  # Exclude internal fields
     ))
 
     # Sort so online/active boards might come first if you handled that in logic,
@@ -172,7 +171,7 @@ def upload_firmware():
     boards_col.update_one(
         {'boardKey': board_key},
         {'$set': {
-            'active_release_id': str(new_release_id),
+            'active_release_id': new_release_id,
             'firmwareVersion': detected_version,  # Update display string
             'updateFirmware': True,  # Flag for ESP32 to check
             'updatedAt': datetime.datetime.now()
@@ -194,6 +193,8 @@ def rollback_firmware():
     board_key = data.get('board_key')
     target_release_id = data.get('target_release_id')
 
+    print(type(board_key))
+
     # 1. Verify Board
     board = boards_col.find_one({'userId': user_id, 'boardKey': board_key})
     if not board:
@@ -211,7 +212,7 @@ def rollback_firmware():
     boards_col.update_one(
         {'boardKey': board_key},
         {'$set': {
-            'active_release_id': str(target_release_id),
+            'active_release_id': ObjectId(target_release_id),
             'firmwareVersion': target_rel['version'],
             'updateFirmware': True,
             'updatedAt': datetime.datetime.now()
@@ -219,6 +220,61 @@ def rollback_firmware():
     )
 
     return jsonify({'success': True, 'message': f"Rolled back to v{target_rel['version']}"})
+
+
+@app.route('/firmware/version', methods=['GET'])
+def get_firmware_version():
+    board_key = request.args.get('boardKey')
+    if not board_key:
+        return "Missing boardKey", 400
+
+    board_details = boards_col.find_one({'boardKey': board_key})
+
+    if not board_details:
+        return "Board not found", 404
+
+    # FIX: Handle case where 'firmwareVersion' doesn't exist yet (New Board)
+    firmware_version = board_details.get('firmwareVersion', '0.0')
+
+    # Return string to ensure Flask doesn't crash on numbers
+    return str(firmware_version)
+
+
+@app.route('/firmware/bin', methods=['GET'])
+def download_firmware():
+    board_key = request.args.get('boardKey')
+    if not board_key:
+        return "Missing boardKey", 400
+
+    board_details = boards_col.find_one({'boardKey': board_key})
+    if not board_details:
+        return "Board not found", 404
+
+    active_release_id = board_details.get('active_release_id')
+
+    # FIX: Handle case where no firmware has been pushed yet
+    if not active_release_id:
+        return "No firmware active for this board", 404
+
+    # FIX: Use try-catch or None check for the release entry
+    firmware_entry = releases_col.find_one({'_id': active_release_id, 'board_key': board_key})
+
+    if not firmware_entry:
+        return "Firmware release entry missing/deleted", 404
+
+    filename = firmware_entry.get('filename')
+    firmware_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    # FIX: Check if actual file exists on disk before sending
+    if not os.path.exists(firmware_file_path):
+        return "Binary file missing from server storage", 404
+
+    return send_file(
+        firmware_file_path,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/octet-stream'
+    )
 
 
 if __name__ == '__main__':
