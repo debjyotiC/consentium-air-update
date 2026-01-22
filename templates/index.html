@@ -352,39 +352,34 @@
 
             renderBoardList() {
                 const container = document.getElementById('boards-container');
-                if(state.boards.length === 0) { container.innerHTML = `<div class="text-xs text-center text-slate-400 py-4">No boards found</div>`; return; }
+                if(state.boards.length === 0) { container.innerHTML = `<div class="text-xs text-center text-slate-400">No boards found</div>`; return; }
 
                 container.innerHTML = state.boards.map(board => {
                     const isActive = state.currentBoard && state.currentBoard.id === board.id;
                     const isOnline = board.status === 'online';
-
-                    const wrapperClass = isActive
-                        ? "bg-indigo-50/40 border-indigo-500 shadow-md ring-1 ring-indigo-500/20 transform scale-[1.02]"
-                        : "bg-white border-slate-200 hover:border-indigo-200 hover:shadow-sm hover:translate-x-1";
-
-                    const iconBg = isActive ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500";
-                    const statusDot = isOnline ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-slate-300";
+                    const baseClass = isActive ? "bg-indigo-50/50 border-indigo-500 ring-1 ring-indigo-500" : "bg-white border-slate-200 hover:border-slate-300";
 
                     return `
-                    <div onclick="ui.selectBoard('${board.id}')" class="${wrapperClass} rounded-2xl border p-4 cursor-pointer transition-all duration-300 relative group">
-                        <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex justify-between items-start">
-                                    <h4 class="font-bold text-sm ${isActive ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'} truncate">${board.name}</h4>
-                                    <span class="text-[10px] font-mono ${isActive ? 'text-indigo-600 bg-indigo-100' : 'text-slate-400 bg-slate-100'} px-1.5 py-0.5 rounded font-bold">v${board.firmware_ver}</span>
+                    <div onclick="ui.selectBoard('${board.id}')" class="${baseClass} rounded-xl border p-4 cursor-pointer shadow-sm transition-all relative overflow-hidden group">
+                        ${isActive ? `<div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>` : ''}
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg ${isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'} flex items-center justify-center">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
                                 </div>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[10px] ${isActive ? 'text-indigo-500' : 'text-slate-400'} font-medium font-mono">${board.architecture}</span>
-                                    <span class="text-slate-300">•</span>
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="w-1.5 h-1.5 rounded-full ${statusDot}"></span>
-                                        <span class="text-[10px] ${isOnline ? 'text-emerald-600' : 'text-slate-400'} font-bold uppercase tracking-wide">${board.status}</span>
+                                <div>
+                                    <h4 class="font-semibold ${isActive ? 'text-indigo-900' : 'text-slate-700'}">${board.name}</h4>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-xs ${isActive ? 'text-indigo-600' : 'text-slate-500'} font-mono font-medium">${board.architecture}</span>
+                                        <span class="${isActive ? 'text-indigo-300' : 'text-slate-300'}">•</span>
+                                        <span class="text-[10px] ${isOnline ? 'text-emerald-600' : 'text-slate-400'} font-medium uppercase tracking-wide">${board.status}</span>
                                     </div>
                                 </div>
                             </div>
+                            <span class="text-xs font-mono ${isActive ? 'text-indigo-700 bg-indigo-100' : 'text-slate-400'} px-2 py-0.5 rounded">v${board.firmware_ver}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs border-t ${isActive ? 'border-indigo-200' : 'border-slate-100'} pt-3 mt-2">
+                             <span class="${isActive ? 'text-indigo-400' : 'text-slate-400'} font-medium">Updated: <span class="${isActive ? 'text-indigo-600' : 'text-slate-500'}">${board.last_updated}</span></span>
                         </div>
                     </div>`;
                 }).join('');

@@ -22,14 +22,12 @@ client = MongoClient(MONGO_URI)
 db = client['consentiumWebApp']
 boards_col = db['newboards']
 users_col = db['users']
-# NEW: Collection to store update history
 releases_col = db['firmware_releases']
 
 USERNAME = "debjyotichowdhury"
 
 
 # --- HELPERS ---
-
 def get_user_id():
     user = users_col.find_one({"username": USERNAME})
     return user.get("_id") if user else None
